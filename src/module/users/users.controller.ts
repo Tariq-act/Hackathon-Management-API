@@ -1,18 +1,15 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
+import { Controller, Get } from '@nestjs/common';
+import { Session } from '@thallesp/nestjs-better-auth';
+import type { UserSession } from '@thallesp/nestjs-better-auth';
 import { UsersService } from './users.service';
-
-class CreateUserDto {
-  email!: string;
-  name?: string;
-}
 
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  @Post()
-  createUser(@Body() body: CreateUserDto) {
-    return this.usersService.createUser(body.email, body.name);
+  @Get('me')
+  getMe(@Session() session: UserSession) {
+    return { user: session.user };
   }
 
   @Get()

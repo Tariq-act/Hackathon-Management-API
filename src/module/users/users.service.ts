@@ -6,12 +6,6 @@ import type { User } from '../../generated/prisma/client';
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
-  createUser(email: string, name?: string): Promise<User> {
-    return this.prisma.user.create({
-      data: { email, name },
-    });
-  }
-
   findUsers(): Promise<User[]> {
     return this.prisma.user.findMany({
       orderBy: { createdAt: 'desc' },
