@@ -16,25 +16,123 @@ NestJS backend for browsing hackathons, admin management, and participant joins.
 - Participants can join active hackathons that have not ended
 - Join records store who joined which hackathon and when
 
+## Environment variables
+
+Create a `.env` in the project root:
+
+```env
+# App
+PORT=3000
+NODE_ENV=development
+
+# Database (required)
+# Runtime queries use DATABASE_URL (pooled URL is fine).
+DATABASE_URL="postgresql://USER:PASSWORD@HOST:5432/DB?sslmode=require"
+
+# Optional: direct (non-pooled) URL for Prisma CLI / migrations.
+# If unset, migrations fall back to DATABASE_URL via prisma.config.ts.
+DIRECT_URL="postgresql://USER:PASSWORD@HOST:5432/DB?sslmode=require"
+
+# Better Auth (required for auth flows)
+BETTER_AUTH_SECRET="generate-a-long-random-string"
+BETTER_AUTH_URL="http://localhost:3000"
+```
+
+| Variable | Required | Used by | Description |
+|----------|----------|---------|-------------|
+| `DATABASE_URL` | Yes | Nest runtime, Prisma CLI (fallback) | Postgres connection string for the app and Prisma Client |
+| `DIRECT_URL` | No | Prisma CLI / migrations | Prefer this for `migrate` when using a pooled `DATABASE_URL` |
+| `BETTER_AUTH_SECRET` | Yes (auth) | Better Auth | Signing secret for sessions/tokens |
+| `BETTER_AUTH_URL` | Yes (auth) | Better Auth | Public base URL of this API (e.g. `http://localhost:3000`) |
+| `PORT` | No | Nest | HTTP port (default `3000`) |
+| `NODE_ENV` | No | Auth / Nest | Use `production` to enable stricter CSRF/origin checks |
+
+Never commit real `.env` values. Keep secrets out of git.
+
 ## Setup
-
-1. Copy env vars into `.env` (at least `DATABASE_URL`; optional `DIRECT_URL`, `BETTER_AUTH_URL`, `PORT`).
-
-2. Install and migrate:
 
 ```bash
 bun install
+# ensure .env is filled in (see above)
 bun run prisma:migrate
 bun run prisma:generate
-```
-
-3. Run:
-
-```bash
 bun run start:dev
 ```
 
-Default port is `3000` (`PORT` in `.env` overrides it).
+## Prisma setup guide
+
+This project uses **Prisma 7** with:
+
+- Schema: `prisma/schema.prisma`
+- Migrations: `prisma/migrations/`
+- CLI config: `prisma.config.ts` (datasource URL from env)
+- Generated client: `src/generated/prisma/` (do not edit by hand)
+- Runtime: `PrismaService` + `@prisma/adapter-pg`
+
+### 1. Configure the database URL
+
+Set `DATABASE_URL` (and optionally `DIRECT_URL`) in `.env`.  
+`prisma.config.ts` resolves the CLI URL as `DIRECT_URL || DATABASE_URL`.
+
+### 2. Edit the schema
+
+Change models/enums in `prisma/schema.prisma`. Keep Nest-friendly naming; use `@@map` for table names when needed.
+
+### 3. Format the schema
+
+```bash
+bun run prisma:format
+```
+
+### 4. Create and apply a migration
+
+```bash
+bun run prisma:migrate
+# equivalent to: prisma migrate dev
+# pass a name when prompted, or:
+bunx prisma migrate dev --name your_change_name
+```
+
+This compares the schema to the DB, writes SQL under `prisma/migrations/`, applies it, and regenerates the client in most setups.
+
+For production / CI (apply existing migrations only, no new ones):
+
+```bash
+bunx prisma migrate deploy
+```
+
+### 5. Generate the client
+
+If you only need a regenerated client (no schema migrate):
+
+```bash
+bun run prisma:generate
+```
+
+`postinstall` also runs `prisma generate` after `bun install`.
+
+### 6. Inspect data (optional)
+
+```bash
+bun run prisma:studio
+```
+
+### Common workflow cheat sheet
+
+| Goal | Command |
+|------|---------|
+| Format schema | `bun run prisma:format` |
+| New migration in dev | `bun run prisma:migrate` |
+| Apply migrations (prod) | `bunx prisma migrate deploy` |
+| Regenerate client | `bun run prisma:generate` |
+| Browse data | `bun run prisma:studio` |
+| Check migration status | `bunx prisma migrate status` |
+
+### Drift / history tips
+
+- Prefer `migrate` over ad-hoc SQL so `_prisma_migrations` stays in sync.
+- If the DB already has tables but history is empty, mark past migrations applied with `prisma migrate resolve --applied <name>` before creating new ones (dev only; understand the risk).
+- Avoid editing old migration files that have already been applied elsewhere.
 
 ## Auth
 
@@ -98,15 +196,6 @@ DTO fields `startsAt` / `endsAt` map to Prisma `startDate` / `endDate`.
 #### Join rules
 
 Returns `400` if the hackathon is inactive, already ended, or the user already joined. Returns `404` if the hackathon does not exist.
-
-## Prisma scripts
-
-```bash
-bun run prisma:format
-bun run prisma:migrate
-bun run prisma:generate
-bun run prisma:studio
-```
 
 ## Tests
 
