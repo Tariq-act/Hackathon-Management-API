@@ -38,6 +38,13 @@ export class HackathonController {
     return this.hackathonService.findAll();
   }
 
+  @Post(':id/join')
+  @Roles(['PARTICIPANT'])
+  @ResponseMessage('Joined hackathon successfully')
+  join(@Param('id') id: string, @Session() session: UserSession) {
+    return this.hackathonService.join(id, session.user.id);
+  }
+
   @Get(':id')
   @AllowAnonymous()
   findOne(@Param('id') id: string) {

@@ -1,6 +1,14 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../../lib/database/prisma.service';
-import type { Hackathon } from '../../generated/prisma/client';
+import {
+  Prisma,
+  type Hackathon,
+  type HackathonParticipant,
+} from '../../generated/prisma/client';
 import { CreateHackathonDto } from './dto/create-hackathon.dto';
 import { UpdateHackathonDto } from './dto/update-hackathon.dto';
 
@@ -60,5 +68,39 @@ export class HackathonService {
     return this.prisma.hackathon.delete({
       where: { id },
     });
+  }
+
+  async join(
+    hackathonId: string,
+    userId: string,
+  ): Promise<HackathonParticipant> {
+    const hackathon = await this.findOne(hackathonId);
+
+    if (!hackathon.isActive) {
+      throw new BadRequestException('Hackathon is not active');
+    }
+
+    if (hackathon.endDate <= new Date()) {
+      throw new BadRequestException('Hackathon has already ended');
+    }
+
+    try {
+      return await this.prisma.hackathonParticipant.create({
+        data: {
+          hackathonId,
+          userId,
+        },
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw new BadRequestException(
+          'You have already joined this hackathon',
+        );
+      }
+      throw error;
+    }
   }
 }
