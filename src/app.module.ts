@@ -7,6 +7,7 @@ import { AppService } from './app.service';
 import { PrismaModule } from './lib/database/prisma.module';
 import { UsersModule } from './module/users/users.module';
 import { APP_GUARD } from '@nestjs/core';
+import { HackathonModule } from './module/hackathon/hackathon.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { APP_GUARD } from '@nestjs/core';
     }),
     PrismaModule,
     UsersModule,
+    HackathonModule,
   ],
   controllers: [AppController],
   providers: [
