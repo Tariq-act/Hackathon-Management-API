@@ -1,9 +1,9 @@
-import { Controller, Get } from '@nestjs/common';
-import { Session } from '@thallesp/nestjs-better-auth';
+import { Controller, Get, Param } from '@nestjs/common';
+import { Roles, Session } from '@thallesp/nestjs-better-auth';
 import type { UserSession } from '@thallesp/nestjs-better-auth';
 import { UsersService } from './users.service';
 
-@Controller('users')
+@Controller('user')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
@@ -12,8 +12,14 @@ export class UsersController {
     return { user: session.user };
   }
 
-  @Get()
-  findUsers() {
-    return this.usersService.findUsers();
+  @Get('all')
+  @Roles(['ADMIN'])
+  findAll() {
+    return this.usersService.findAll();
+  }
+
+  @Get(':id')
+  findById(@Param('id') id: string) {
+    return this.usersService.findById(id);
   }
 }
